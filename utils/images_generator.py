@@ -175,6 +175,19 @@ def salt_and_pepper_noise(salt_prob=0.3, pepper_prob=0.3, image=np.ones((256, 25
 
     return noisy_image
 
+def gaussian_noise_gs(mean=0.0, sigma=0.1, image=np.ones((256, 256))):
+    row,col= image.shape
+    gauss = np.random.normal(mean,sigma,(row,col))
+    gauss = gauss.reshape(row,col)
+    noisy = image + gauss
+    return noisy
+
+def poisson_noise(image=np.ones((256, 256))):
+    vals = len(np.unique(image))
+    vals = 2 ** np.ceil(np.log2(vals))
+    noisy = np.random.poisson(image * vals) / float(vals)
+    return noisy
+
 if __name__ == '__main__':
     try:
         # Parameters
