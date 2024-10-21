@@ -27,6 +27,39 @@ def normalize_img_to_0_255(img):
     img_norm *= 255
     return img_norm
 
+def uniform_image(intensity=127, image_size=(256, 256)):
+    return np.ones(image_size, dtype=np.int8)*intensity
+
+def colored_noise(k, image_size=(256, 256)):
+
+    # ruido branco uniforme
+    white_noise = np.random.uniform(-0.5, 0.5, image_size)
+    
+    # Aplica a transformada e desloca as baixas frequencias para o centro
+    y = np.fft.fftshift(np.fft.fft2(white_noise))
+
+    ''' "matriz de frequência": 
+    No caso 1-D, esta seria uma matriz das frequências reais que correspondem às amplitudes 
+    dadas pela transformada. 
+    No caso 2-D, esta é a distância do centro do nosso espaço de Fourier deslocado, 
+    pois quanto mais longe vamos das bordas, maior será a frequência capturada naquele ponto'''
+    _x, _y = np.mgrid[0:y.shape[0], 0:y.shape[1]]
+    f = np.hypot(_x - y.shape[0] / 2, _y - y.shape[1] / 2)
+
+    # ruido modificado
+    y_2 = y / f**(k/2)
+
+    colored_noise = np.nan_to_num(y_2, nan=0, posinf=0, neginf=0)
+
+
+    # Retira o deslocamento e calcula a inversa da transformada 
+    colored_noise = np.fft.ifft2(np.fft.ifftshift(colored_noise)).real
+
+    # Normaliza o resultado
+    # colored_noise /= np.std(colored_noise)
+
+    return colored_noise
+
 def logistic_map(x0, r, num_iterations, image_size=(256, 256)):
     '''
         r in [0, 4]
@@ -186,6 +219,49 @@ def poisson_noise(image=np.ones((256, 256))):
     vals = len(np.unique(image))
     vals = 2 ** np.ceil(np.log2(vals))
     noisy = np.random.poisson(image * vals) / float(vals)
+    return noisy
+
+def periodic_noise(frequency_x, frequency_y, amplitude, image=np.ones((256, 256))):
+    """
+    Adds periodic sinusoidal noise to an existing image.
+
+    Parameters:
+    image (np.ndarray): Input image.
+    frequency_x (float): Frequency of the sinusoidal noise along the x-axis.
+    frequency_y (float): Frequency of the sinusoidal noise along the y-axis.
+    amplitude (float): Amplitude of the noise.
+
+    Returns:
+    np.ndarray: The image with periodic noise added.
+    """
+    rows, cols = image.shape[:2]
+    
+    # Create the x and y coordinates
+    x = np.arange(cols)
+    y = np.arange(rows)
+    X, Y = np.meshgrid(x, y)
+    
+    # Generate sinusoidal noise
+    noise = amplitude * np.sin(2 * np.pi * (frequency_x * X / cols + frequency_y * Y / rows))
+    
+    # If the image is RGB, apply noise to each channel; if grayscale, apply directly
+    if len(image.shape) == 3:  # RGB image
+        noisy_image = np.copy(image).astype(float)
+        for i in range(3):  # Apply the noise to each color channel
+            noisy_image[:, :, i] += noise
+    else:  # Grayscale image
+        noisy_image = image.astype(float) + noise
+    
+    # Clip values to the valid range for an image (0 to 255)
+    noisy_image = np.clip(noisy_image, 0, 255).astype(np.uint8)
+    
+    return noisy_image
+
+def speckle_noise_gs(image=np.ones((256, 256))):
+    row,col = image.shape
+    gauss = np.random.randn(row,col)
+    gauss = gauss.reshape(row,col)        
+    noisy = image + image * gauss
     return noisy
 
 if __name__ == '__main__':

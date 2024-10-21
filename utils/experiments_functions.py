@@ -10,7 +10,7 @@ import seaborn as sns
 def get_img_info(img, q_linspace = np.linspace(-2, 20, num = 221)):
     data = []
     for q in q_linspace:
-        print(f"q = {q}")
+        # print(f"q = {q}")
         ord_dis = ordpy.weighted_smoothness_structure(img, q=q)
         probs = ordpy.weighted_smoothness_structure_probs(img, q=q)
         w_ent_correct, w_comp_correct = get_weighted_entropy_complexity(img, 2, 2, 1, 1, q)
