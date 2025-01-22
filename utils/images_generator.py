@@ -208,6 +208,52 @@ def salt_and_pepper_noise(salt_prob=0.3, pepper_prob=0.3, image=np.ones((256, 25
 
     return noisy_image
 
+
+def salt_and_pepper_noise_v2(salt_prob=0.3, pepper_prob=0.3, image=np.ones((256, 256))):
+    """
+    Add salt and pepper noise to an image.
+    
+    Parameters:
+    image (PIL.Image): Input image
+    salt_prob (float): Probability of salt noise (white pixels), range [0, 1]
+    pepper_prob (float): Probability of pepper noise (black pixels), range [0, 1]
+    
+    Returns:
+    PIL.Image: Image with added salt and pepper noise
+    """
+    # Input validation
+    if not 0 <= salt_prob <= 1 or not 0 <= pepper_prob <= 1:
+        raise ValueError("Probabilities must be between 0 and 1")
+    if salt_prob + pepper_prob > 1:
+        raise ValueError("Sum of probabilities must not exceed 1")
+    
+    # Convert image to numpy array
+    img_array = np.array(image)
+    
+    # Create copy of image
+    noised_image = img_array.copy()
+    
+    # Generate random noise mask
+    mask = np.random.random(img_array.shape[:2])
+    
+    # Add salt noise (white pixels)
+    salt_mask = mask < salt_prob
+    if len(img_array.shape) == 3:  # Color image
+        for i in range(img_array.shape[2]):
+            noised_image[salt_mask, i] = 255
+    else:  # Grayscale image
+        noised_image[salt_mask] = 255
+    
+    # Add pepper noise (black pixels)
+    pepper_mask = (mask >= salt_prob) & (mask < salt_prob + pepper_prob)
+    if len(img_array.shape) == 3:  # Color image
+        for i in range(img_array.shape[2]):
+            noised_image[pepper_mask, i] = 0
+    else:  # Grayscale image
+        noised_image[pepper_mask] = 0
+    
+    return noised_image
+
 def gaussian_noise_gs(mean=0.0, sigma=0.1, image=np.ones((256, 256))):
     row,col= image.shape
     gauss = np.random.normal(mean,sigma,(row,col))
