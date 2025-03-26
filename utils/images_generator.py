@@ -2,9 +2,10 @@ import numpy as np
 import os
 import cv2
 import matplotlib.pyplot as plt
+from PIL import Image
 
 
-def generate_histogram(img, isNormalized=True, title='Histogram of Img'):
+def generate_histogram(img, isNormalized=True, title='Histogram of Img', range=(0, 255)):
     '''
         Plots a histogram of the image
     '''
@@ -13,7 +14,7 @@ def generate_histogram(img, isNormalized=True, title='Histogram of Img'):
     else:
         normalized_img = img
     flattened_img = normalized_img.flatten()
-    plt.hist(flattened_img, bins=256, range=(0, 255), color='blue', alpha=0.7)
+    plt.hist(flattened_img, bins=256, range=range, color='blue', alpha=0.7)
     plt.xlabel('Value')
     plt.ylabel('Frequency')
     plt.title(title)
@@ -254,12 +255,40 @@ def salt_and_pepper_noise_v2(salt_prob=0.3, pepper_prob=0.3, image=np.ones((256,
     
     return noised_image
 
-def gaussian_noise_gs(mean=0.0, sigma=0.1, image=np.ones((256, 256))):
+def gaussian_noise_gs(mean=0.0, sigma=20, image=np.ones((256, 256))):
+    '''
+    Args:
+        mean (float): Mean of the Gaussian noise distribution (default 0)
+        sigma (float): Standard deviation of the Gaussian noise distribution (default 20)
+        image (numpy.ndarray): Input image (default is a 256x256 array of ones)
+    
+    Returns:
+        numpy.ndarray: Noisy image with pixel values clipped to [0, 255]
+    '''
     row,col= image.shape
     gauss = np.random.normal(mean,sigma,(row,col))
     gauss = gauss.reshape(row,col)
     noisy = image + gauss
-    return noisy
+    noisy_clipped = np.clip(noisy, 0, 255)
+    return noisy_clipped
+
+def add_gaussian_noise_giva(imagem, media=0, sigma=25, same_noise=False): #rui­do aditivo
+    if same_noise:
+        # Gera um rui­do para cada pixel em apenas 1 canal (dimensao: altura x largura)
+        ruido_2d = np.random.normal(media, sigma, imagem.shape[:2])
+        # Repete o rui­do para os 3 canais, garantindo que cada pixel tera o mesmo valor em R, G e B
+        ruido = np.stack([ruido_2d]*3, axis=-1)
+    else:
+        # Gera rui­do independente para cada pixel em cada canal (dimensao: altura x largura x 3)
+        ruido = np.random.normal(media, sigma, imagem.shape)
+    
+    # Adiciona o rui­do a imagem
+    imagem_ruidosa = imagem + ruido
+    
+    # Garante que os valores dos pixels permanecam no intervalo [0, 255]
+    imagem_ruidosa = np.clip(imagem_ruidosa, 0, 255)
+    
+    return imagem_ruidosa.astype(np.uint8)
 
 def poisson_noise(image=np.ones((256, 256))):
     vals = len(np.unique(image))
@@ -302,6 +331,79 @@ def periodic_noise(frequency_x, frequency_y, amplitude, image=np.ones((256, 256)
     noisy_image = np.clip(noisy_image, 0, 255).astype(np.uint8)
     
     return noisy_image
+
+def add_speckle_noise(image, intensity=0.5, mean=0, sigma=0.1):
+    """
+    Add speckle noise to an image.
+    
+    Speckle noise is a multiplicative noise that follows the equation:
+    J = I + n*I = I(1 + n)
+    where I is the input image and n is Gaussian noise with mean and sigma.
+    
+    Parameters:
+    image (PIL.Image): Input image
+    intensity (float): Noise intensity factor (0 to 1)
+    mean (float): Mean of the Gaussian distribution
+    sigma (float): Standard deviation of the Gaussian distribution
+    
+    Returns:
+    PIL.Image: Image with added speckle noise
+    """
+    # Convert image to numpy array
+    img_array = np.array(image).astype(float) / 255.0
+    
+    # Generate Gaussian noise
+    noise = np.random.normal(mean, sigma, img_array.shape)
+    
+    # Apply speckle noise equation: I + n*I = I(1 + n)
+    # Scale the noise by intensity factor
+    noised_image = img_array + intensity * noise * img_array
+    
+    # Clip values to valid range [0, 1]
+    noised_image = np.clip(noised_image, 0, 1)
+    
+    # Return the array
+    return (noised_image * 255).astype(np.uint8)
+
+def add_speckle_noise_v2(image, mean=0, sigma=10):
+    """
+    Add speckle noise to an image.
+    
+    Speckle noise is a multiplicative noise that follows the equation:
+    J = I + n*I = I(1 + n)
+    where I is the input image and n is Gaussian noise with mean and sigma.
+    
+    Parameters:
+    image (numpy.ndarray(np.uint8)): Input image (Intensities in range [0, 255])
+    mean (float): Mean of the Gaussian distribution
+    sigma (float): Standard deviation of the Gaussian distribution
+    
+    Returns:
+    numpy.ndarray(np.uint8): Image with added speckle noise
+    """
+
+    # Check if input is a numpy array
+    if not isinstance(image, np.ndarray):
+        raise TypeError("Input must be a numpy array")
+    
+    # Check if dtype is uint8
+    if image.dtype != np.uint8:
+        raise ValueError("Image must be of dtype uint8")
+    
+    # Check if pixel values are in range [0, 255]
+    if image.min() < 0 or image.max() > 255:
+        raise ValueError("Pixel values must be in the range [0, 255]")
+    # extracts shape
+    row,col= image.shape
+    # generates gaussian values
+    gauss = np.random.normal(mean,sigma,(row,col))
+    # makes sure the shape of the values match the image
+    gauss = gauss.reshape(row,col)
+    # generates noised image
+    noisy = image + image * gauss
+    # clips noised image to values [0, 255]
+    noisy_clipped = np.clip(noisy, 0, 255).astype(np.uint8)
+    return noisy_clipped
 
 def speckle_noise_gs(image=np.ones((256, 256))):
     row,col = image.shape
