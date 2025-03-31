@@ -16,23 +16,29 @@ def add_gaussian_noise(image=np.ones((256, 256)), mean=0, sigma=20):
     Returns:
         numpy.ndarray(np.float64): Noisy image
     '''
-    # Check if input is a numpy array
+    # check if input is a numpy array
     if not isinstance(image, np.ndarray):
         raise TypeError("Input must be a numpy array")
     
-    # Check if dtype is uint8
+    # check if dtype is uint8
     if image.dtype != np.uint8:
         raise ValueError("Image must be of dtype uint8")
     
-    # Check if pixel values are in range [0, 255]
+    # check if pixel values are in range [0, 255]
     if image.min() < 0 or image.max() > 255:
         raise ValueError("Pixel values must be in the range [0, 255]")
-    
+    # extract the shape
     row,col= image.shape
+    # creates the gaussian distribution
     gauss = np.random.normal(mean,sigma,(row,col))
-    gauss = gauss.reshape(row,col)
+    # adds the noise
     noisy = image + gauss
-    return noisy
+    # extracts the min and max of the noised image
+    noisy_min = noisy.min()
+    noisy_max = noisy.max()    
+    # normalize to [0, 255]
+    normalized = ((noisy - noisy_min) / (noisy_max - noisy_min) * 255).astype(np.uint8)
+    return normalized
 
 def add_speckle_noise(image=np.ones((256, 256)), mean=0, sigma=10):
     """
@@ -51,15 +57,15 @@ def add_speckle_noise(image=np.ones((256, 256)), mean=0, sigma=10):
     numpy.ndarray(np.uint8): Image with added speckle noise
     """
 
-    # Check if input is a numpy array
+    # check if input is a numpy array
     if not isinstance(image, np.ndarray):
         raise TypeError("Input must be a numpy array")
     
-    # Check if dtype is uint8
+    # check if dtype is uint8
     if image.dtype != np.uint8:
         raise ValueError("Image must be of dtype uint8")
     
-    # Check if pixel values are in range [0, 255]
+    # check if pixel values are in range [0, 255]
     if image.min() < 0 or image.max() > 255:
         raise ValueError("Pixel values must be in the range [0, 255]")
     # extracts shape
@@ -70,7 +76,12 @@ def add_speckle_noise(image=np.ones((256, 256)), mean=0, sigma=10):
     gauss = gauss.reshape(row,col)
     # generates noised image
     noisy = image + image * gauss
-    return noisy
+    # extracts the min and max of the noised image
+    noisy_min = noisy.min()
+    noisy_max = noisy.max()    
+    # normalize to [0, 255]
+    normalized = ((noisy - noisy_min) / (noisy_max - noisy_min) * 255).astype(np.uint8)
+    return normalized
 
 # def salt_and_pepper_noise_v2(salt_prob=0.3, pepper_prob=0.3, image=np.ones((256, 256))):
 #     """
