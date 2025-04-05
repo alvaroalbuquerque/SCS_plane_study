@@ -132,6 +132,42 @@ def add_sp_noise(image=np.ones((256, 256)), salt_prob=0.3, pepper_prob=0.3):
     
     return noisy
 
+def add_poisson_noise(image=np.ones((256, 256)), factor=1.0):
+    """
+    Add poisson noise to an image.
+    
+    Parameters:
+    image (numpy.ndarray(np.float64)): Input image (Intensities in range [0, 1])
+    factor (float): Scaling factor to control noise intensity. Higher values produce more noise. (default 1.0)
+    
+    Returns:
+    numpy.ndarray(np.float64): Image with added poisson noise
+    """
+    # check if input is a numpy array
+    if not isinstance(image, np.ndarray):
+        raise TypeError("Input must be a numpy array")
+    
+    # check if dtype is float64
+    if image.dtype != np.float64:
+        raise ValueError("Image must be of dtype float64")
+    
+    # check if pixel values are in range [0, 1]
+    if image.min() < 0 or image.max() > 1:
+        raise ValueError("Pixel values must be in the range [0, 1]")
+    
+    # scale image to adjust noise level (higher values = more noise)
+    scaled_img = image * factor
+    
+    # generate poisson noise
+    # For each pixel value λ, generate a random value from Poisson(λ)
+    # Then divide by factor to bring back to original scale
+    noisy = np.random.poisson(scaled_img * 255.0) / 255.0 / factor
+    
+    # Clip values to valid range
+    noisy = np.clip(noisy, 0.0, 1.0)    
+        
+    return noisy
+
 
 # def poisson_noise(image=np.ones((256, 256))):
 #     vals = len(np.unique(image))
