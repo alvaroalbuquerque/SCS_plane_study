@@ -138,42 +138,84 @@ def add_poisson_noise(image=np.ones((256, 256)), factor=1.0):
     
     Parameters:
     image (numpy.ndarray(np.float64)): Input image (Intensities in range [0, 1])
-    factor (float): Scaling factor to control noise intensity. Higher values produce more noise. (default 1.0)
+    factor (float): Scaling factor to control noise intensity. Higher values produce more noise. 
+                    Factor=0 produces no noise. (default 1.0)
     
     Returns:
     numpy.ndarray(np.float64): Image with added poisson noise
     """
-    # check if input is a numpy array
+    # Check if input is a numpy array
     if not isinstance(image, np.ndarray):
         raise TypeError("Input must be a numpy array")
     
-    # check if dtype is float64
+    # Check if dtype is float64
     if image.dtype != np.float64:
         raise ValueError("Image must be of dtype float64")
     
-    # check if pixel values are in range [0, 1]
+    # Check if pixel values are in range [0, 1]
     if image.min() < 0 or image.max() > 1:
         raise ValueError("Pixel values must be in the range [0, 1]")
     
-    # scale image to adjust noise level (higher values = more noise)
-    scaled_img = image * factor
+    # Special case: if factor=0, return original image without noise
+    if factor == 0:
+        return image.copy()
     
-    # generate poisson noise
+    # Scale image to adjust noise level (higher values = more noise)
+    # Use the original image as lambda values for Poisson distribution
+    # Higher factor = more variation from original value
+    
+    # Generate Poisson noise
     # For each pixel value λ, generate a random value from Poisson(λ)
-    # Then divide by factor to bring back to original scale
-    noisy = np.random.poisson(scaled_img * 255.0) / 255.0 / factor
+    noisy = np.random.poisson(image * 255.0 / factor) * factor / 255.0
     
     # Clip values to valid range
-    noisy = np.clip(noisy, 0.0, 1.0)    
-        
+    noisy = np.clip(noisy, 0.0, 1.0)
+    
     return noisy
 
-
-# def poisson_noise(image=np.ones((256, 256))):
-#     vals = len(np.unique(image))
-#     vals = 2 ** np.ceil(np.log2(vals))
-#     noisy = np.random.poisson(image * vals) / float(vals)
-#     return noisy
+def add_poisson_noise_normalized(image=np.ones((256, 256)), factor=1.0):
+    """
+    Add poisson noise to an image.
+    
+    Parameters:
+    image (numpy.ndarray(np.float64)): Input image (Intensities in range [0, 1])
+    factor (float): Scaling factor to control noise intensity. Higher values produce more noise. 
+                    Factor=0 produces no noise. (default 1.0)
+    
+    Returns:
+    numpy.ndarray(np.float64): Image with added poisson noise
+    """
+    # Check if input is a numpy array
+    if not isinstance(image, np.ndarray):
+        raise TypeError("Input must be a numpy array")
+    
+    # Check if dtype is float64
+    if image.dtype != np.float64:
+        raise ValueError("Image must be of dtype float64")
+    
+    # Check if pixel values are in range [0, 1]
+    if image.min() < 0 or image.max() > 1:
+        raise ValueError("Pixel values must be in the range [0, 1]")
+    
+    # Special case: if factor=0, return original image without noise
+    if factor == 0:
+        return image.copy()
+    
+    # Scale image to adjust noise level (higher values = more noise)
+    # Use the original image as lambda values for Poisson distribution
+    # Higher factor = more variation from original value
+    
+    # Generate Poisson noise
+    # For each pixel value λ, generate a random value from Poisson(λ)
+    noisy = np.random.poisson(image * 255.0 / factor) * factor / 255.0
+    
+    # extracts the min and max of the noised image
+    noisy_min = noisy.min()
+    noisy_max = noisy.max()    
+    # normalize to [0, 1]
+    normalized = (noisy - noisy_min) / (noisy_max - noisy_min)
+    
+    return normalized
 
 
 if __name__ == '__main__':
