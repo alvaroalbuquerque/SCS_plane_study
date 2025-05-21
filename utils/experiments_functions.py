@@ -18,3 +18,13 @@ def get_img_info(img, q_linspace = np.linspace(-2, 20, num = 221)):
 
     data = pd.DataFrame(data, columns = ["q", "Smoothness", "Curve structure", "Weighted Entropy Correct", "Weighted Complexity Correct", "prob0", "prob1", "prob2"])
     return data
+
+def get_img_info_simple(img):
+    data = []
+    
+    ord_dis = ordpy.weighted_smoothness_structure(img, q=0)
+    w_ent_correct, w_comp_correct = get_weighted_entropy_complexity(img, 2, 2, 1, 1, q=0)
+    data.append([ord_dis[0], ord_dis[1], w_ent_correct, w_comp_correct])
+
+    data = pd.DataFrame(data, columns = ["Smoothness", "Curve structure", "Entropy", "Complexity"])
+    return data
