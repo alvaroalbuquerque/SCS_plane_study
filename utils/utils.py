@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import pandas as pd
 
 def normalize_img_to_int(img):
     '''
@@ -31,3 +32,16 @@ def normalize_uint8_to_float64(img):
     # normalizes
     normalized = ((img - uint8_min) / (uint8_max - uint8_min)).astype(np.float64)
     return normalized
+
+def read_entropy_complexity_limits(folder_path, N=24):
+    '''
+        Reads the entropy and complexity limits from files.
+        Returns two dataframes: df_cont and df_troz.
+    '''
+    df_cont = pd.read_csv(folder_path +'continua-N'+str(N)+'.q1', skiprows=20, sep = '  ')
+    df_cont.columns = ['HT', 'CJT']
+
+    df_troz = pd.read_csv(folder_path +'trozos-N'+str(N)+'.q1', skiprows=20, sep = '  ')
+    df_troz.columns = ['HT', 'CJT']
+    
+    return df_cont, df_troz
