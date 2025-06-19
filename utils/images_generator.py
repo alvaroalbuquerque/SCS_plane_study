@@ -1,8 +1,7 @@
 import numpy as np
-import os
-import cv2
 import matplotlib.pyplot as plt
 from PIL import Image
+import random
 
 
 def generate_histogram(img, isNormalized=True, title='Histogram of Img', range=(0, 255)):
@@ -33,10 +32,10 @@ def uniform_image(intensity=127, image_size=(256, 256)):
 
 def colored_noise(k, image_size=(256, 256)):
 
-    # ruido branco uniforme
+    # Uniform white noise
     white_noise = np.random.uniform(-0.5, 0.5, image_size)
     
-    # Aplica a transformada e desloca as baixas frequencias para o centro
+    # Applies the Fourier transform and shifts low frequencies to the center
     y = np.fft.fftshift(np.fft.fft2(white_noise))
 
     ''' "matriz de frequência": 
@@ -56,8 +55,12 @@ def colored_noise(k, image_size=(256, 256)):
     # Retira o deslocamento e calcula a inversa da transformada 
     colored_noise = np.fft.ifft2(np.fft.ifftshift(colored_noise)).real
 
-    # Normaliza o resultado
-    # colored_noise /= np.std(colored_noise)
+    
+    # Normalize to [0, 1] range
+    min_val = colored_noise.min()
+    max_val = colored_noise.max()
+    normalized_noise = (colored_noise - min_val) / (max_val - min_val)
+    
 
     return colored_noise
 
@@ -412,33 +415,213 @@ def speckle_noise_gs(image=np.ones((256, 256))):
     noisy = image + image * gauss
     return noisy
 
+def fractal_surface(image_size=(256, 256), roughness=0.5, iterations=7):
+    """
+    Generate a fractal surface using the 2D midpoint displacement algorithm.
+    
+    Parameters:
+    width (int): Width of the output image
+    height (int): Height of the output image
+    roughness (float): Controls the roughness of the fractal (0.0 to 1.0)
+    iterations (int): Number of iterations to perform
+    
+    Returns:
+    numpy.ndarray: 2D array representing the fractal surface
+    """
+    # Size should be 2^n + 1
+    (width, height) = image_size
+    size = max(width, height)
+    n = int(np.ceil(np.log2(size - 1)))
+    size = 2**n + 1
+    
+    # Initialize grid with zeros
+    grid = np.zeros((size, size))
+    
+    # Set the four corners to random initial values
+    grid[0, 0] = random.random()
+    grid[0, size-1] = random.random()
+    grid[size-1, 0] = random.random()
+    grid[size-1, size-1] = random.random()
+    
+    # Apply the midpoint displacement algorithm
+    step = size - 1
+    scale = 1.0 * roughness
+    
+    while step > 1:
+        half_step = step // 2
+        
+        # Diamond step
+        for y in range(half_step, size, step):
+            for x in range(half_step, size, step):
+                avg = (grid[y-half_step, x-half_step] +  # top-left
+                       grid[y-half_step, x+half_step] +  # top-right
+                       grid[y+half_step, x-half_step] +  # bottom-left
+                       grid[y+half_step, x+half_step]) / 4.0  # bottom-right
+                
+                grid[y, x] = avg + (random.random() * 2 - 1) * scale
+        
+        # Square step
+        for y in range(0, size, half_step):
+            for x in range((y + half_step) % step, size, step):
+                total = 0
+                count = 0
+                
+                # Check the four adjacent cells
+                if y >= half_step:  # top
+                    total += grid[y-half_step, x]
+                    count += 1
+                if y + half_step < size:  # bottom
+                    total += grid[y+half_step, x]
+                    count += 1
+                if x >= half_step:  # left
+                    total += grid[y, x-half_step]
+                    count += 1
+                if x + half_step < size:  # right
+                    total += grid[y, x+half_step]
+                    count += 1
+                
+                avg = total / count
+                grid[y, x] = avg + (random.random() * 2 - 1) * scale
+        
+        step = half_step
+        scale *= roughness
+    
+    # Crop to requested dimensions
+    return grid[:height, :width]
+
+def fractal_surface_hurst(image_size=(256, 256), hurst=0.7, delta0=1.0, iterations=None):
+    """
+    Generate a fractal surface using the random midpoint displacement algorithm with Hurst exponent.
+    Source: Ribeiro HV, Zunino L, Lenzi EK, Santoro PA, Mendes RS
+            (2012) Complexity-Entropy Causality Plane as a Complexity
+            Measure for Two-Dimensional Patterns. PLoS ONE 7(8): e40689.
+            https://doi.org/10.1371/journal.pone.0040689
+    
+    Parameters:
+    image_size (tuple): Width and height of the output image
+    hurst (float): Hurst exponent controlling the fractal dimension (0.0 to 1.0)
+                  Higher values create smoother surfaces
+    delta0 (float): Initial standard deviation for the random displacement
+    iterations (int): Number of iterations to perform (if None, calculated from size)
+    
+    Returns:
+    numpy.ndarray: 2D array representing the fractal surface
+    """
+    # Size should be 2^k + 1
+    (width, height) = image_size
+    size = max(width, height)
+    
+    # Calculate k based on size or use provided iterations
+    if iterations is None:
+        k = int(np.ceil(np.log2(size - 1)))
+    else:
+        k = iterations
+    
+    size = 2**k + 1
+    
+    # Fractal dimension D = 3 - h, where h is the Hurst exponent
+    h = hurst
+    D = 3 - h
+    
+    # Initialize grid with zeros
+    grid = np.zeros((size, size))
+    
+    # Set the four corners to random initial values
+    grid[0, 0] = np.random.normal(0, delta0)
+    grid[0, size-1] = np.random.normal(0, delta0)
+    grid[size-1, 0] = np.random.normal(0, delta0)
+    grid[size-1, size-1] = np.random.normal(0, delta0)
+    
+    # Apply the midpoint displacement algorithm with Hurst exponent
+    delta = delta0
+    
+    for i in range(k):
+        step = 2**(k-i)
+        half_step = step // 2
+        
+        # Diamond step: add midpoints of squares
+        for y in range(0, size-1, step):
+            for x in range(0, size-1, step):
+                # Calculate midpoint coordinates
+                mid_y = y + half_step
+                mid_x = x + half_step
+                
+                if mid_y < size and mid_x < size:
+                    # Average of the four corners
+                    avg = (grid[y, x] +               # top-left
+                           grid[y, x+step] +          # top-right
+                           grid[y+step, x] +          # bottom-left
+                           grid[y+step, x+step]) / 4  # bottom-right
+                    
+                    # Displace by Gaussian random value with current delta
+                    grid[mid_y, mid_x] = avg + np.random.normal(0, delta)
+        
+        # Square step: add midpoints of edges
+        for y in range(0, size, half_step):
+            for x in range(0, size, half_step):
+                # Skip already calculated points
+                if (y % step == 0 and x % step == 0) or (y % step == half_step and x % step == half_step):
+                    continue
+                
+                count = 0
+                total = 0
+                
+                # Check the four adjacent points (in a square pattern)
+                if y >= half_step:  # top
+                    total += grid[y-half_step, x]
+                    count += 1
+                if y + half_step < size:  # bottom
+                    total += grid[y+half_step, x]
+                    count += 1
+                if x >= half_step:  # left
+                    total += grid[y, x-half_step]
+                    count += 1
+                if x + half_step < size:  # right
+                    total += grid[y, x+half_step]
+                    count += 1
+                
+                if count > 0:
+                    avg = total / count
+                    grid[y, x] = avg + np.random.normal(0, delta)
+        
+        # Update delta based on Hurst exponent: δₖ = δ₀·2^(-k·h)
+        delta = delta0 * (2 ** (-(i+1) * h))
+    
+    # Normalize values to 0-1 range for easier visualization
+    grid = (grid - grid.min()) / (grid.max() - grid.min())
+    
+    # Crop to requested dimensions
+    return grid[:height, :width]
+
+
 if __name__ == '__main__':
     try:
-        # Parameters
-        a = 1.4
-        b = 0.3
-        x0 = 0.1
-        y0 = 0.1
-        iterations = 1000
+        # Generate fractal surfaces with different Hurst exponents
+        hurst_values = [0.1, 0.5, 0.9]
+        surfaces = []
 
-        # Generate the 2D Hénon map data
-        image_x, image_y = henon_map(a, b, x0, y0, iterations)
+        # Generate the three surfaces
+        for h in hurst_values:
+            surfaces.append(fractal_surface_hurst((256, 256), h))
 
-        # Plot the results
-        plt.figure(1,figsize=(12, 8))
-        plt.imshow(normalize_img_to_0_255(image_x), aspect='auto', origin='lower', cmap='viridis')
-        plt.colorbar(label='x Value')
-        plt.title('Hénon Map 2D Data (x)')
-        plt.xlabel('Image X')
-        plt.ylabel('Image Y')
-        # plt.show()
-        # plt.clf()
-        plt.figure(2,figsize=(12, 8))
-        plt.imshow(normalize_img_to_0_255(image_y), aspect='auto', origin='lower', cmap='viridis')
-        plt.colorbar(label='y Value')
-        plt.title('Hénon Map 2D Data (y)')
-        plt.xlabel('Image X')
-        plt.ylabel('Image Y')
+        # Create a figure with three subplots side by side
+        fig, axs = plt.subplots(1, 3, figsize=(18, 6))
+
+        # Plot each surface in its own subplot
+        for i, (h, surface) in enumerate(zip(hurst_values, surfaces)):
+            im = axs[i].imshow(surface, cmap='hsv')
+            axs[i].set_title(f'Hurst = {h}')
+            plt.colorbar(im, ax=axs[i], label='Elevation')
+            axs[i].set_xticks([])
+            axs[i].set_yticks([])
+            print(surface.shape)
+            print(surface.min(), surface.max())
+
+        plt.tight_layout()
+      
+        # plt.figure(figsize=(10, 8))
+        # plt.imshow(surface, cmap='hsv')
+        # plt.colorbar(label='Elevation')
         plt.show()
     except Exception as e:
         print("An exception occurred:\n\t\t{}".format(str(e)))
