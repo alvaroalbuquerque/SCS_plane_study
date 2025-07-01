@@ -123,6 +123,42 @@ def henon_map(a, b, x0, y0, num_iterations, image_size=(256, 256)):
 
     return image_x, image_y
 
+def new_henon_map(a=1.4, b=0.3, x0=0.1, y0=0.3, image_size=(256, 256), burn_in=1000):
+    """
+    Generates a 2D matrix (image) by reshaping Hénon map iterates.
+
+    Parameters:
+    a, b (float): Hénon map parameters.
+    x0, y0 (float): Initial values.
+    image_size (tuple): Size (rows, cols) of the output image.
+    burn_in (int): Number of iterations to discard before storing data.
+
+    Returns:
+    np.ndarray: 2D NumPy array with values shaped from Hénon map output.
+    """
+    total_values = image_size[0] * image_size[1]
+    x, y = x0, y0
+
+    # Burn-in to avoid transient behavior
+    for _ in range(burn_in):
+        x, y = 1 - a * x**2 + y, b * x
+
+    # Collect values after burn-in
+    values = []
+    for _ in range(total_values):
+        x, y = 1 - a * x**2 + y, b * x
+        values.append(x)  # or use y if preferred
+
+    # Normalize to [0, 1] for image-like behavior
+    values = np.array(values)
+    values -= values.min()
+    values /= values.max()
+
+    # Reshape to 2D matrix (image)
+    image = values.reshape(image_size)
+
+    return image
+
 def noisy(noise_typ,image):
     if noise_typ == "gauss":
         row,col,ch= image.shape
