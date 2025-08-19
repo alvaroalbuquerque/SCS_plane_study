@@ -3,19 +3,29 @@ import numpy as np
 def henon_texture(a=1.4, b=0.3, x0=0.1, y0=0.3, image_size=(256, 256), burn_in=1000):
     total_values = image_size[0] * image_size[1]
     x, y = x0, y0
-
-    for _ in range(burn_in):
-        x, y = 1 - a * x**2 + y, b * x
-
     values = []
-    for _ in range(total_values):
-        x, y = 1 - a * x**2 + y, b * x
-        values.append(x)
 
-    values = np.array(values)
-    values -= values.min()
-    values /= values.max()
-    return values.reshape(image_size).astype(np.float64)
+    try:
+        for _ in range(burn_in):
+            x, y = 1 - a * x**2 + y, b * x
+            if abs(x) > 1e6 or abs(y) > 1e6:
+                raise OverflowError("Divergence detected during burn-in")
+
+        for _ in range(total_values):
+            x, y = 1 - a * x**2 + y, b * x
+            if abs(x) > 1e6 or abs(y) > 1e6:
+                raise OverflowError("Divergence detected during iteration")
+            values.append(x)
+
+        values = np.array(values)
+        values -= values.min()
+        if values.max() > 0:
+            values /= values.max()
+        return values.reshape(image_size).astype(np.float64)
+
+    except OverflowError:
+        # Return a zero image if overflow occurred
+        return np.zeros(image_size, dtype=np.float64)
 
 
 def logistic_texture(r=3.9, x0=0.5, image_size=(256, 256), burn_in=1000):
