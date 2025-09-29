@@ -218,6 +218,144 @@ def add_poisson_noise_normalized(image=np.ones((256, 256)), factor=1.0):
     return normalized
 
 
+def add_gaussian_noise_0to1(image=np.ones((256, 256)), intensity=0.5):
+    '''
+    Add gaussian noise to an image with intensity parameter from 0 to 1.
+
+    Parameters:
+        image (numpy.ndarray(np.float64)): Input image (default is a 256x256 array of ones)
+        intensity (float): Noise intensity from 0 (no noise) to 1 (maximum noise), range [0, 1]
+    
+    Returns:
+        numpy.ndarray(np.float64): Noisy image
+    '''
+    # Input validation
+    if not isinstance(image, np.ndarray):
+        raise TypeError("Input must be a numpy array")
+    
+    if image.dtype != np.float64:
+        raise ValueError("Image must be of dtype float64")
+    
+    if image.min() < 0 or image.max() > 1:
+        raise ValueError("Pixel values must be in the range [0, 1]")
+    
+    if not 0 <= intensity <= 1:
+        raise ValueError("Intensity must be between 0 and 1")
+    
+    # Define min and max sigma values for gaussian noise
+    sigma_min = 0.0
+    sigma_max = 1.0
+    
+    # Map intensity to sigma parameter
+    sigma = sigma_min + intensity * (sigma_max - sigma_min)
+    
+    # Call the original function
+    return add_gaussian_noise(image, mean=0, sigma=sigma)
+
+def add_speckle_noise_0to1(image=np.ones((256, 256)), intensity=0.5):
+    """
+    Add speckle noise to an image with intensity parameter from 0 to 1.
+
+    Parameters:
+    image (numpy.ndarray(np.float64)): Input image (Intensities in range [0, 1])
+    intensity (float): Noise intensity from 0 (no noise) to 1 (maximum noise), range [0, 1]
+    
+    Returns:
+    numpy.ndarray(np.float64): Image with added speckle noise
+    """
+    # Input validation
+    if not isinstance(image, np.ndarray):
+        raise TypeError("Input must be a numpy array")
+    
+    if image.dtype != np.float64:
+        raise ValueError("Image must be of dtype float64")
+    
+    if image.min() < 0 or image.max() > 1:
+        raise ValueError("Pixel values must be in the range [0, 1]")
+    
+    if not 0 <= intensity <= 1:
+        raise ValueError("Intensity must be between 0 and 1")
+    
+    # Define min and max sigma values for speckle noise
+    sigma_min = 0.0
+    sigma_max = 1.0
+    
+    # Map intensity to sigma parameter
+    sigma = sigma_min + intensity * (sigma_max - sigma_min)
+    
+    # Call the original function
+    return add_speckle_noise(image, mean=0, sigma=sigma)
+
+def add_sp_noise_0to1(image=np.ones((256, 256)), intensity=0.5):
+    """
+    Add salt and pepper noise to an image with intensity parameter from 0 to 1.
+    
+    Parameters:
+    image (numpy.ndarray(np.float64)): Input image (Intensities in range [0, 1])
+    intensity (float): Noise intensity from 0 (no noise) to 1 (maximum noise), range [0, 1]
+    
+    Returns:
+    numpy.ndarray(np.float64): Image with added salt and pepper noise
+    """
+    # Input validation
+    if not isinstance(image, np.ndarray):
+        raise TypeError("Input must be a numpy array")
+    
+    if image.dtype != np.float64:
+        raise ValueError("Image must be of dtype float64")
+    
+    if image.min() < 0 or image.max() > 1:
+        raise ValueError("Pixel values must be in the range [0, 1]")
+    
+    if not 0 <= intensity <= 1:
+        raise ValueError("Intensity must be between 0 and 1")
+    
+    # Define min and max probability values for salt and pepper noise
+    prob_min = 0.0
+    prob_max = 0.5  # Maximum of 0.5 for each (salt + pepper = 1.0 max)
+    
+    # Map intensity to probability parameters
+    prob = prob_min + intensity * (prob_max - prob_min)
+    
+    # Call the original function with equal salt and pepper probabilities
+    return add_sp_noise(image, salt_prob=prob, pepper_prob=prob)
+
+def add_poisson_noise_0to1(image=np.ones((256, 256)), intensity=0.5):
+    """
+    Add poisson noise to an image with intensity parameter from 0 to 1.
+    
+    Parameters:
+    image (numpy.ndarray(np.float64)): Input image (Intensities in range [0, 1])
+    intensity (float): Noise intensity from 0 (no noise) to 1 (maximum noise), range [0, 1]
+    
+    Returns:
+    numpy.ndarray(np.float64): Image with added poisson noise
+    """
+    # Input validation
+    if not isinstance(image, np.ndarray):
+        raise TypeError("Input must be a numpy array")
+    
+    if image.dtype != np.float64:
+        raise ValueError("Image must be of dtype float64")
+    
+    if image.min() < 0 or image.max() > 1:
+        raise ValueError("Pixel values must be in the range [0, 1]")
+    
+    if not 0 <= intensity <= 1:
+        raise ValueError("Intensity must be between 0 and 1")
+    
+    # Define min and max factor values for poisson noise
+    factor_min = 0.0    # Very small value instead of 0 to avoid division issues
+    factor_max = 20.0
+    
+    # Map intensity to factor parameter
+    factor = factor_min + intensity * (factor_max - factor_min)
+    
+    # Call the original function
+    return add_poisson_noise(image, factor=factor)
+
+
+
 if __name__ == '__main__':
     try:
         print("Running noise_generator.py")
